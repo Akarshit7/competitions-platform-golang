@@ -10,15 +10,16 @@ import (
 )
 
 type Config struct {
-	Port string
-	Env  string
+	Port        string
+	Env         string
 	DatabaseUrl string
-	// RedisHost string
-	// RedisPort string
-	// RedisPassword string
-	// RedisTlsEnabled bool
-	// DefaultPage uint64
-	// DefaultPageSize uint64
+	RedisHost     string
+	RedisPort     string
+	RedisPassword string
+	RedisAddr     string
+	DefaultPage     int
+	DefaultPageSize int
+	CorsOrigins     []string
 	JwtTokenSecret      string
 	RefreshTokenSecret  string
 	TempTokenSecret     string
@@ -44,6 +45,12 @@ func MustLoad() Config {
 	refreshTokenExpiry := os.Getenv("REFRESH_TOKEN_EXPIRY")
 	tempTokenExpiry := os.Getenv("TEMP_TOKEN_EXPIRY")
 	adminJwtTokenExpiry := os.Getenv("ADMIN_JWT_TOKEN_EXPIRY")
+	redisHost := os.Getenv("REDIS_HOST")
+	redisPort := os.Getenv("REDIS_PORT")
+	redisPassword := os.Getenv("REDIS_PASSWORD")
+	defaultPage := os.Getenv("DEFAULT_PAGE")
+	defaultPageSize := os.Getenv("DEFAULT_PAGE_SIZE")
+	corsOrigins := os.Getenv("CORS_ORIGINS")
 
 	if strings.TrimSpace(port) == "" {
 		panic("PORT should not be empty")
@@ -63,14 +70,51 @@ func MustLoad() Config {
 	if strings.TrimSpace(tempTokenSecret) == "" {
 		panic("TEMP_TOKEN_SECRET should not be empty")
 	}
+	if strings.TrimSpace(redisHost) == "" {
+		redisHost = "127.0.0.1"
+	}
+	if strings.TrimSpace(redisPort) == "" {
+		redisPort = "6379"
+	}
+	redisPassword = strings.Trim(redisPassword, "\"")
+	redisAddr := redisHost + ":" + redisPort
+
+	dp := 1
+	if v := strings.TrimSpace(defaultPage); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			dp = n
+		}
+	}
+	dps := 10
+	if v := strings.TrimSpace(defaultPageSize); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			dps = n
+		}
+	}
+	var origins []string
+	if strings.TrimSpace(corsOrigins) != "" {
+		for _, o := range strings.Split(corsOrigins, ",") {
+			o = strings.TrimSpace(o)
+			if o != "" {
+				origins = append(origins, o)
+			}
+		}
+	}
 
 	return Config{
 		Port:                port,
 		Env:                 env,
 		DatabaseUrl:         databaseUrl,
-		JwtTokenSecret:      jwtTokenSecret,
-		RefreshTokenSecret:  refreshTokenSecret,
-		TempTokenSecret:     tempTokenSecret,
+		RedisHost:           redisHost,
+		RedisPort:           redisPort,
+		RedisPassword:       redisPassword,
+		RedisAddr:           redisAddr,
+		DefaultPage:         dp,
+		DefaultPageSize:     dps,
+		CorsOrigins:         origins,
+		JwtTokenSecret:      strings.Trim(jwtTokenSecret, "\""),
+		RefreshTokenSecret:  strings.Trim(refreshTokenSecret, "\""),
+		TempTokenSecret:     strings.Trim(tempTokenSecret, "\""),
 		JwtTokenExpiry:      mustParseUint64("JWT_TOKEN_EXPIRY", jwtTokenExpiry),
 		RefreshTokenExpiry:  mustParseUint64("REFRESH_TOKEN_EXPIRY", refreshTokenExpiry),
 		TempTokenExpiry:     mustParseUint64("TEMP_TOKEN_EXPIRY", tempTokenExpiry),
