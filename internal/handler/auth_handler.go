@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"regexp"
@@ -14,6 +14,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/Akarshit7/competition-platform-go/internal/auth"
 	"github.com/Akarshit7/competition-platform-go/internal/config"
+	"github.com/Akarshit7/competition-platform-go/internal/logger"
 	"github.com/Akarshit7/competition-platform-go/internal/middleware"
 	"github.com/Akarshit7/competition-platform-go/internal/response"
 	"github.com/Akarshit7/competition-platform-go/internal/store"
@@ -64,8 +65,8 @@ func (h *AuthHandler) SendOTP(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusInternalServerError, "failed to store otp")
 		return
 	}
-	// Mock SMS: log to console (in real, call SMS provider)
-	log.Printf("[OTP] phone=%s otp=%s", req.Phone, otp)
+	// Mock SMS: structured log (in real, call SMS provider)
+	slog.Info("otp generated", "phone", req.Phone, "otp", otp, "request_id", logger.GetRequestID(r.Context()))
 	response.JSON(w, http.StatusOK, map[string]string{"message": "otp sent"})
 }
 

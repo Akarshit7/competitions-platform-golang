@@ -1,13 +1,14 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/Akarshit7/competition-platform-go/internal/config"
 	"github.com/Akarshit7/competition-platform-go/internal/database"
 	"github.com/Akarshit7/competition-platform-go/internal/handler"
+	"github.com/Akarshit7/competition-platform-go/internal/logger"
 	"github.com/Akarshit7/competition-platform-go/internal/middleware"
 	"github.com/Akarshit7/competition-platform-go/internal/response"
 	"github.com/Akarshit7/competition-platform-go/internal/store"
@@ -16,23 +17,26 @@ import (
 
 func main() {
 	cfg := config.MustLoad()
+	log := logger.New(cfg.Env)
+	slog.SetDefault(log)
 
 	pool, err := database.NewPool(cfg)
 	if err != nil {
-		log.Printf("WARN: db connect failed: %v (server will start but DB routes will 500)", err)
+		slog.Warn("db connect failed, server will start but DB routes will 500", "error", err)
 	} else {
 		defer pool.Close()
-		// try run migrations automatically if pool ok
+		slog.Info("db connected", "host", cfg.DatabaseUrl)
 		if err := runMigrations(pool); err != nil {
-			log.Printf("WARN: migration failed: %v", err)
+			slog.Warn("migration failed", "error", err)
 		}
 	}
 
 	rdb, err := iredis.NewClient(cfg)
 	if err != nil {
-		log.Printf("WARN: redis connect failed: %v (otp will fail)", err)
+		slog.Warn("redis connect failed, otp will fail", "error", err)
 	} else {
 		defer rdb.Close()
+		slog.Info("redis connected", "addr", cfg.RedisAddr)
 	}
 
 	// stores (may be nil if pool nil -> handlers will handle)
@@ -92,9 +96,8 @@ func main() {
 	mux.HandleFunc("POST /api/v1/comments/{id}/replies", middleware.AuthMiddleware(cfg, http.HandlerFunc(socialH.CreateReply)).ServeHTTP)
 	mux.HandleFunc("GET /api/v1/comments/{id}/replies", socialH.ListReplies)
 
-	// wrap with global middleware
-	handler := middleware.Recovery(middleware.CORS(cfg, mux))
-	handler = middleware.Logger(handler)
+	// wrap with global middleware: request logging outermost, then recovery, then CORS
+	handler := middleware.RequestLogger(middleware.RecoveryWithLog(middleware.CORS(cfg, mux)))
 
 	addr := ":" + cfg.Port
 	server := &http.Server{
@@ -105,9 +108,10 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	log.Printf("server listening on %s env=%s", addr, cfg.Env)
+	slog.Info("server listening", "addr", addr, "env", cfg.Env)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("listen: %v", err)
+		slog.Error("server failed", "error", err)
+		panic(err)
 	}
 }
 
