@@ -18,7 +18,7 @@ func main() {
 	}
 	defer pool.Close()
 
-	email := "admin@talenzap.com"
+	email := "admin@competitions-social-media-platform.com"
 	password := "Admin@123"
 	name := "Super Admin"
 

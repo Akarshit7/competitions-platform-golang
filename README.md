@@ -1,4 +1,4 @@
-# Talenzap Backend
+# Competitions Social Media Platform Backend
 
 A high-performance REST API for a short-video competition platform, written in pure Go using only the standard library's `net/http` router alongside `pgx` and `go-redis`.
 
@@ -23,7 +23,7 @@ Built around phone-based OTP authentication for end users and email/password aut
 
 ## Overview
 
-Talenzap is the backend for a competition-driven video platform. Users sign in with a phone number and a one-time password, browse curated feeds, submit videos to competitions, vote on submissions, and interact through likes and nested comments.
+Competitions Social Media Platform is the backend for a competition-driven video platform. Users sign in with a phone number and a one-time password, browse curated feeds, submit videos to competitions, vote on submissions, and interact through likes and nested comments.
 
 Key characteristics:
 
